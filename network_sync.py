@@ -12,7 +12,7 @@ target_path = "C:\\Users\\amade\\Documents\\Unreal Projects\\SwordKing503\\"
 folder_to_sync = ['Source', "Content", "Config"]
 #folder_to_sync = ['Source']
 #folder_to_sync = ['Source', "Content"]
-specific_flds = ["C:\\Users\\amade\\Documents\\Unreal Projects\\VRExpPluginExample-4.26-Locked\\Plugins\\VRExpansionPlugin\\VRExpansionPlugin\\Source"]
+specific_flds = []#["C:\\Users\\amade\\Documents\\Unreal Projects\\VRExpPluginExample-4.26-Locked\\Plugins\\VRExpansionPlugin\\VRExpansionPlugin\\Source"]
 
 max_file_size_mb = 20000;
 
@@ -33,7 +33,9 @@ def sync_folder(folder):
                     if not filecmp.cmp(source_file, target_file):
                         print("Copying: ".ljust(15), source_file, " to ", target_file, " files are different")
                         os.makedirs(os.path.dirname(target_file), exist_ok=True)
-                        shutil.copy2(source_file, target_file)
+                        try: shutil.copy2(source_file, target_file)
+                        except Exception as e:
+                            print("Failed to copy " + source_file + " cause: ", e)
                     else:
                         print("Not copying: ".ljust(15), source_file, " files are the same")
                 else: 
@@ -48,7 +50,7 @@ for fld in specific_flds:
 
 
 for dir in directory_contents:
-    if dir in folder_to_sync:
+    if dir in folder_to_sync or 1:
         sync_folder(source_path + dir)
 
 
