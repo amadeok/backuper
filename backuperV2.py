@@ -32,8 +32,9 @@ copy_from_flds = ['Source', "Content", "Config", "blender"]
 backup_to = ["D:\\soft\\unreal_backup_cpp_4.27\\", "E:\\soft\\unreal_backup_cpp_4.27\\"  ]
 date_based__folders = ["Content\\StylizedAssets"]
 
-
-
+root_copy_from = ["C:\\Users\\amade\\Documents\\dawd\\"]
+backup_to= ["F:\\all\\music\\backup"]
+copy_from_flds =[name for name in os.listdir(root_copy_from[0]) if os.path.isdir(root_copy_from[0]+name)]+["."]
 folder_nb = 0
 folders_to_exclude = ["package\\", "Saved\\", "CachedAssetRegistry", "NativizedBuild", "v16\\", "\\Development", "\\Engine", "\\AdvancedSessions", "\\Intermediate", "\\DebugGame", "\\Binaries", "\\StylizedAssets", "\\DerivedDataCache"]#"LongswordAnimsetPro", "MedievalInfantry", "ExampleContent_CelShader"]
 nb_backup_files = 0
@@ -117,7 +118,7 @@ for copy_to in backup_to:
     except: pass
     folder_nb= len(next(os.walk(copy_to))[1])
 
-    existing_backups = [copy_to + file for file in next(os.walk(copy_to))[1]]
+    existing_backups = [copy_to + "\\" + file for file in next(os.walk(copy_to))[1]]
 
     now = datetime.now()
     dt_string = now.strftime("_%d-%m-%Y_%H.%M.%S")

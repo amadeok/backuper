@@ -3,7 +3,7 @@ import os, filecmp, shutil
 source_path = "C:\\Users\\amade\\Documents\\Unreal Projects\\VRExpPluginExample-4.26-Locked\\"
 target_path = '\\\\LAPTOP-40OC0U0E\\VRExpPluginExample-4.26-Locked\\'
 
-source_path = "E:\\amadeo\\SwordKing\\"
+source_path = "D:\\soft\\backup 26 10 2022\\SwordKing\\"
 target_path = "C:\\Users\\amade\\Documents\\Unreal Projects\\SwordKing503\\"
 #ret = open(path)
 #for f in os.walk(path):
