@@ -1,4 +1,5 @@
 import logging
+import threading
 from backuperV2 import main_task, root_copy_from
 
 from watchdog.observers import Observer
@@ -11,6 +12,7 @@ timestamp_file = "last_operation_time.json"
 backup_every_h = 0
 backup_every_m = 1
 backup_every_s = 0
+tot_backup_every_s = (backup_every_h*3600) + (backup_every_m*60) + backup_every_s
 
 def get_last_operation_time():
     try:
@@ -24,14 +26,19 @@ def save_last_operation_time():
     with open(timestamp_file, "w") as f:
         json.dump({"last_operation_time": datetime.now().isoformat()}, f)
 
-def perform_operation():
-    main_task()
-    save_last_operation_time()
 
 class MyHandler(FileSystemEventHandler):
+    
+    def perform_operation(self, trigger=None):
+        if trigger != None: logging.info(F"----> Performing operation, trigger: {trigger}")
+        main_task()
+        save_last_operation_time()
+        self.last_op_time =datetime.now()#.isoformat()
+        
     def __init__(self) -> None:
         super().__init__()
         self.last_op_time = get_last_operation_time()
+        self.timer_handle = None
         
     def on_modified(self, event):
         self.handle_event(event)
@@ -48,25 +55,35 @@ class MyHandler(FileSystemEventHandler):
     def handle_event(self, event):
         logging.debug(f"--> Detected change: {event.src_path}")
         
-        # last_op_time = get_last_operation_time()
         now = datetime.now()
 
-        # If the last operation time is not set or 1 hour has passed since the last operation
         if self.last_op_time is None or now - self.last_op_time >= timedelta(hours=backup_every_h, minutes=backup_every_m, seconds=backup_every_s):
-            logging.debug(f"----> Performing backup operation...  delta: {now - self.last_op_time} ")
-            perform_operation()
-            self.last_op_time =datetime.now()#.isoformat()
+            logging.debug(f"-----> Performing backup operation...  delta: {now - self.last_op_time} ")
+            self.perform_operation()
         else:
             logging.debug(f"--> Operation skipped. Only {now - self.last_op_time} has passed since last operation.")
+            if self.timer_handle:
+                logging.debug("--> Cancelling timer handle")
+                self.timer_handle.cancel()
+            logging.debug("--> Setting delayed timer ")
+            self.timer_handle = threading.Timer(tot_backup_every_s, lambda: self.perform_operation("delayed timer"))
+            self.timer_handle.start()
 
 def monitor_directory(path):
     event_handler = MyHandler()
     observer = Observer()
     observer.schedule(event_handler, path, recursive=True)
     observer.start()
-
+    import msvcrt
+    
     try:
         while True:
+            while msvcrt.kbhit():
+                k = msvcrt.getch()
+                if k == b'b' or k == b'B':
+                    logging.info("----> b pressed, doing backup")
+                    event_handler.perform_operation("key press")
+                
             time.sleep(1)  # Keeps the script running to monitor changes
     except KeyboardInterrupt:
         observer.stop()
