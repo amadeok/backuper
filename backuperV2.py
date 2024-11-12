@@ -6,6 +6,7 @@ import argparse
 import psutil
 import app_logging
 import logging
+from utils_ import get_folder_size, find_oldest_file
 
 # parser = argparse.ArgumentParser(description="Process some arguments.")
 # parser.add_argument('--proc', type=str, help="Specify the process to check for")
@@ -52,16 +53,24 @@ year = 2022; month = 4; day = 1
 copy_if_recent = ["fixed", datetime(year, month, day, 0, 0)]
 extensions = [".song", ".mscz", ".ass", ".css", ".csv", ".txt", ".mid"]
 
+
+
 class context():
     def __init__(self) -> None:
         self.nb_backup_files = 0
         self.target_dir = None
         self.existing_backups = None
         self.folder_nb = 0
+        self.max_file_versions = 2
+        self.exclude_with_string = "Autosave"
+        self.fld_size = 0
+        self.file_version_threshold =  4e+9 # 4gb
+        self.delete_older = False
         
 
 def backup_folder(root_fld_from, folder, based_on_date, ctx:context):
     # global nb_backup_files
+    assert(ctx.max_file_versions != 1)
     for path, subdirs, files in os.walk(root_fld_from+folder):
         
         # for s in subdirs:
@@ -70,7 +79,7 @@ def backup_folder(root_fld_from, folder, based_on_date, ctx:context):
         #     os.makedirs(td, exist_ok=True)
 
         for name in files:
-            if not file_has_extension(name, extensions):
+            if not file_has_extension(name, extensions) or ctx.exclude_with_string and ctx.exclude_with_string in name:
                 continue
 
             root_target = path.split(root_fld_from)[1]
@@ -87,7 +96,7 @@ def backup_folder(root_fld_from, folder, based_on_date, ctx:context):
                 shutil.copy2(curr_src, target_file)
                 ctx.nb_backup_files+=1
 
-            file_check = is_missing_or_older(prev_backup_files, curr_src)
+            file_check = is_missing_or_older(prev_backup_files, curr_src, ctx)
 
             if not based_on_date:
                 
@@ -116,19 +125,32 @@ def is_excluded(path):
             return True
     return False
 
-def is_missing_or_older(prev_files, new_file):
+def is_missing_or_older(prev_files, new_file, ctx:context):
     if copy_unchanged_files: 
         return dc.get(3)
 
+    prev_files_exist = []
+    prev_files_exist_all = []
     exsisting_count = 0
     for prev_file in prev_files:
-        if os.path.isfile(prev_file):
+        ex = os.path.isfile(prev_file)
+        prev_files_exist_all.append(ex)
+        if ex:
             exsisting_count += 1
+            prev_files_exist.append(prev_file)
+
+            
     if exsisting_count == 0:
         return 'prev file non existent'
-
+    elif ctx.delete_older and  exsisting_count > 1 and exsisting_count >= ctx.max_file_versions:
+        oldest = find_oldest_file(prev_files_exist)
+        os.remove(oldest)
+        ind = prev_files.index(oldest)
+        prev_files_exist_all[ind] = False
+        logging.info(f"--> Removing oldest version file ({exsisting_count} >= {ctx.max_file_versions}) {oldest}")
+    
     n = len(prev_files) -1
-    while not os.path.isfile(prev_files[n]):
+    while not prev_files_exist_all[n]:# os.path.isfile(prev_files[n]):
         n-=1
 
     #prev_time = os.path.getmtime(prev_files[n])
@@ -142,14 +164,17 @@ def is_missing_or_older(prev_files, new_file):
 
 def main_task():
     for copy_to in backup_to:
-        try: os.makedirs(copy_to)
-        except: pass
-        ctx = context()
+        os.makedirs(copy_to, exist_ok=1)
         
-        ctx.folder_nb= len(next(os.walk(copy_to))[1])
+        ctx = context()
+        ctx.fld_size = get_folder_size(copy_to)
+        ctx.delete_older = ctx.fld_size > ctx.file_version_threshold
+        
+        flds = next(os.walk(copy_to))[1]
+        ctx.folder_nb = len(flds)
 
-        ctx.existing_backups = [copy_to + "\\" + file for file in next(os.walk(copy_to))[1]]
-
+        ctx.existing_backups = [copy_to + "\\" + file for file in flds if file != "Documents" and file != "Attachments"]
+        
         now = datetime.now()
         dt_string = now.strftime("%Y-%m-%d_%H.%M.%S")
         logging.info(f"date and time = { dt_string}")	
@@ -160,8 +185,6 @@ def main_task():
 
         try: os.mkdir(ctx.target_dir)
         except: logging.error(f"Error creating folder {ctx.target_dir}", )
-
-        max_size = 30
 
         for folder in date_based__folders:
             backup_folder(root_copy_from, folder, True, ctx)

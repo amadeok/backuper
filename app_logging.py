@@ -1,26 +1,23 @@
 
-import logging
-
-from logging.handlers import RotatingFileHandler
+import logging, sys
 
 # Create a logger
 logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)  
+logger.setLevel(logging.DEBUG)  # Set the minimum level of messages to log
 
-log_file = 'backuperV2.log'
-max_log_size = 5 * 1024 * 1024  # 5 MB
-backup_count = 3  
+# Create a file handler to log to a file
+file_handler = logging.FileHandler('backuperV2.log')
+file_handler.setLevel(logging.DEBUG)  # Set the minimum level for file logging
+file_format = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+file_handler.setFormatter(file_format)
 
-rotating_handler = RotatingFileHandler(log_file, maxBytes=max_log_size, backupCount=backup_count)
-rotating_handler.setLevel(logging.DEBUG)
-log_format = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-rotating_handler.setFormatter(log_format)
+# Create a stream handler to log to the console
+console_handler = logging.StreamHandler(sys.stdout)
+console_handler.setLevel(logging.DEBUG)  # Set the minimum level for console logging
+console_handler.setFormatter(file_format)
 
-# Create a console handler
-console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.DEBUG)
-console_handler.setFormatter(log_format)
-
-# Add handlers to the logger
-logger.addHandler(rotating_handler)
+# Add both handlers to the logger
+logger.addHandler(file_handler)
 logger.addHandler(console_handler)
+
+
