@@ -2,7 +2,7 @@ import logging
 import threading
 import app_logging
 
-from backuperV2 import main_task, root_copy_from
+from backuperV2 import main_task, root_copy_from, extensions
 
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
@@ -37,7 +37,6 @@ class MyHandler(FileSystemEventHandler):
         save_last_operation_time()
         self.last_op_time =datetime.now()#.isoformat()
 
-        
     def __init__(self) -> None:
         super().__init__()
         self.last_op_time = get_last_operation_time()
@@ -48,20 +47,17 @@ class MyHandler(FileSystemEventHandler):
         
     def on_modified(self, event):
         self.handle_event(event)
-
     def on_created(self, event):
         self.handle_event(event)
-
     def on_deleted(self, event):
         self.handle_event(event)
-
     def on_moved(self, event):
         self.handle_event(event)
-
     def handle_event(self, event):
-        self.prev_event = self.cur_event
-        self.cur_event = event
-        if time.time() - self.prev_call_time > 0.1 or self.prev_event != self.cur_event:
+        if not event.src_path.endswith(tuple(extensions)):  return
+        # self.prev_event = self.cur_event
+        # self.cur_event = event
+        if time.time() - self.prev_call_time > 0.5:# or self.prev_event != self.cur_event:
             self.prev_call_time = time.time()
             logging.debug(f"--> Detected change: {event.src_path}")
             
@@ -72,12 +68,17 @@ class MyHandler(FileSystemEventHandler):
                 self.perform_operation()
             else:
                 logging.debug(f"--> Operation skipped. Only {now - self.last_op_time} has passed since last operation.")
-                if self.timer_handle:
-                    logging.debug("--> Cancelling timer handle")
-                    self.timer_handle.cancel()
-                logging.debug("--> Setting delayed timer ")
-                self.timer_handle = threading.Timer(tot_backup_every_s, lambda: self.perform_operation("delayed timer"))
-                self.timer_handle.start()
+                start_t = True
+                if self.timer_handle and self.timer_handle.is_alive():
+                    start_t = False
+                    # logging.debug("--> Cancelling timer handle")
+                    # self.timer_handle.cancel()
+                if start_t:
+                    logging.debug("--> Setting delayed timer ")
+                    self.timer_handle = threading.Timer(tot_backup_every_s, lambda: self.perform_operation("delayed timer"))
+                    self.timer_handle.start()
+        # else:
+        #     logging.info("deboucne")
 
 def monitor_directory(path):
     event_handler = MyHandler()
