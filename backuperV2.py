@@ -51,7 +51,7 @@ folders_to_exclude = ["package\\", "Saved\\", "CachedAssetRegistry", "NativizedB
 
 year = 2022; month = 4; day = 1
 copy_if_recent = ["fixed", datetime(year, month, day, 0, 0)]
-extensions = [".song", ".mscz", ".ass", ".css", ".csv", ".txt", ".mid"]
+extensions = [".song", ".mscz", ".ass", ".css", ".csv", ".txt", ".mid", ".json", ".dorico"]
 
 
 
