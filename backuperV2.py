@@ -162,6 +162,24 @@ def is_missing_or_older(prev_files, new_file, ctx:context):
 
     return 'not copying'
 
+import os
+import stat
+import shutil
+
+def force_delete_folder(path):
+    """Delete a folder and all its contents, even if files are read-only or protected."""
+    if not os.path.exists(path):
+        print(f"Path does not exist: {path}")
+        return
+    
+    def on_rm_error(func, path, exc_info):
+        os.chmod(path, stat.S_IWRITE)
+        func(path)
+    
+    shutil.rmtree(path, onerror=on_rm_error)
+    logging.info(f"Successfully deleted: {path}")
+
+
 def main_task():
     for copy_to in backup_to:
         os.makedirs(copy_to, exist_ok=1)
@@ -194,7 +212,9 @@ def main_task():
 
         if ctx.nb_backup_files == 0:
             logging.info(f"No files backuped, deleting empty dir {ctx.target_dir}")
-            os.rmdir(ctx.target_dir)
+            force_delete_folder(ctx.target_dir)
+            # os.rmdir(ctx.target_dir)
+            # os.system(f"rm ")
 
 
 if __name__ == "__main__":
